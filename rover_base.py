@@ -3,7 +3,7 @@ Base rover controller classes for MicroMelon Rover Control System
 Provides unified interface for BLE and simulator connections with safety features.
 """
 
-from abc import ABC, abstractmethod
+from abc import ABC
 import time
 import sys
 from typing import Optional, Tuple, Dict, Any
@@ -373,10 +373,14 @@ class RoverControllerBase(ABC):
         
         self.logger.info(f"Initialized {self.__class__.__name__}")
     
-    @abstractmethod
     def connect(self) -> bool:
-        """Connect to rover - implement for specific connection type"""
-        pass
+        """Connect to rover.
+
+        Subclasses for non-BLE targets (e.g., simulator) should override this. BLE connections
+        are handled via `connect_physical_rover` to ensure we always use the shared
+        `RoverController` instance (`controller.rc`).
+        """
+        raise NotImplementedError("Connect method not implemented for this controller")
     
     def get_sensors(self) -> SensorData:
         """Get current sensor readings"""
@@ -507,54 +511,69 @@ class BLERoverController(RoverControllerBase):
     def __init__(self, config: RoverConfig, auto_port: int = None):
         super().__init__(config)
         self.auto_port = auto_port
-    
-    def connect(self) -> bool:
-        """Connect to physical rover via BLE"""
-        if self.connected:
+
+
+def connect_physical_rover(controller: BLERoverController, port: int = None) -> bool:
+    """Connect to a physical rover via BLE using the shared RoverController instance.
+
+    Args:
+        controller: The BLE rover controller wrapper.
+        port: Optional explicit 4-digit BLE port. Falls back to controller.auto_port or a prompt.
+    """
+    if controller.connected:
+        return True
+
+    attempt_count = 0
+    max_attempts = controller.config.connection_retry_attempts
+
+    while attempt_count < max_attempts and not controller.connected:
+        try:
+            port_value = port or controller.auto_port
+
+            if port_value is None:
+                port_input = input("Enter BLE port (4 digits): ")
+                if not port_input.isdigit() or len(port_input) != 4:
+                    print("Invalid port format. Please enter a 4-digit number.")
+                    continue
+                port_value = int(port_input)
+            else:
+                if isinstance(port_value, str):
+                    if not port_value.isdigit():
+                        raise ValueError("BLE port must be numeric")
+                    port_value = int(port_value)
+
+            if not (1000 <= int(port_value) <= 9999):
+                raise ValueError("BLE port must be a 4-digit number (1000-9999)")
+
+            controller.logger.info(f"Attempting BLE connection on port {port_value}")
+            controller.rc.connectBLE(int(port_value))
+            controller.connected = True
+
+            Robot.setName("MicroMelon")
+            controller.rc.startRover()
+
+            # Initialize with first LED color
+            controller.set_led_color(0)
+
+            controller.logger.info(f"Successfully connected to BLE rover on port {port_value}")
             return True
-        
-        attempt_count = 0
-        max_attempts = self.config.connection_retry_attempts
-        
-        while attempt_count < max_attempts and not self.connected:
-            try:
-                if self.auto_port:
-                    port = self.auto_port
-                    self.logger.info(f"Attempting auto-connect to port {port}")
-                else:
-                    port_input = input("Enter BLE port (4 digits): ")
-                    if not port_input.isdigit() or len(port_input) != 4:
-                        print("Invalid port format. Please enter a 4-digit number.")
-                        continue
-                    port = int(port_input)
-                
-                self.logger.info(f"Attempting BLE connection on port {port}")
-                self.rc.connectBLE(port)
-                self.connected = True
-                
-                Robot.setName("MicroMelon")
-                self.rc.startRover()
-                
-                # Initialize with first LED color
-                self.set_led_color(0)
-                
-                self.logger.info(f"Successfully connected to BLE rover on port {port}")
-                return True
-                
-            except TimeoutError:
-                attempt_count += 1
-                self.logger.warning(f"Connection timeout (attempt {attempt_count}/{max_attempts})")
-                if attempt_count < max_attempts:
-                    time.sleep(2)  # Wait before retry
-            
-            except Exception as e:
-                self.error_manager.handle_error(
-                    ConnectionError(f"BLE connection failed: {e}", "BLE")
-                )
-                return False
-        
-        self.logger.error("Failed to establish BLE connection after all attempts")
-        return False
+
+        except TimeoutError:
+            attempt_count += 1
+            controller.logger.warning(
+                f"Connection timeout (attempt {attempt_count}/{max_attempts})"
+            )
+            if attempt_count < max_attempts:
+                time.sleep(2)
+
+        except Exception as e:
+            controller.error_manager.handle_error(
+                ConnectionError(f"BLE connection failed: {e}", "BLE")
+            )
+            return False
+
+    controller.logger.error("Failed to establish BLE connection after all attempts")
+    return False
 
 
 class SimulatorRoverController(RoverControllerBase):

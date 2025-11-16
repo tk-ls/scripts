@@ -13,7 +13,7 @@ from typing import Optional
 
 from config import RoverConfig, create_default_config_file
 from error_handling import setup_global_logging, get_error_manager
-from rover_base import create_rover_controller
+from rover_base import create_rover_controller, connect_physical_rover
 
 
 def create_argument_parser():
@@ -178,6 +178,17 @@ Examples:
     return parser
 
 
+def connect_rover(controller, target_type: str, ble_port: int = None) -> bool:
+    """Establish a connection using the shared RoverController instance."""
+    target = (target_type or '').lower()
+    if target == 'physical':
+        return connect_physical_rover(controller, ble_port)
+    elif target == 'simulator':
+        return controller.connect()
+    else:
+        raise ValueError(f"Unknown target type: {target_type}")
+
+
 def validate_arguments(args):
     """Validate command line arguments"""
     errors = []
@@ -301,42 +312,49 @@ def show_status(config: RoverConfig, target_type: str):
     print("MicroMelon Rover Status")
     print("=" * 60)
     
+    controller = create_rover_controller(config, target_type)
+
     try:
-        with create_rover_controller(config, target_type) as rover:
-            status = rover.get_status()
-            
-            print(f"Connection: {'✓ Connected' if status['connected'] else '✗ Not connected'}")
-            print(f"Current LED Color: {status['current_led_color']}")
-            
-            print("\nSensor Readings:")
-            sensors = status['sensors']
-            print(f"  Ultrasonic: {sensors['ultrasonic']}")
-            print(f"  Battery: {sensors['battery_percentage']} ({sensors['battery_voltage']})")
-            print(f"  IMU Accel: X={sensors['accel_x']}, Y={sensors['accel_y']}, Z={sensors['accel_z']}")
-            print(f"  IMU Gyro: X={sensors['gyro_x']}, Y={sensors['gyro_y']}, Z={sensors['gyro_z']}")
-            print(f"  IR Sensors: Left={sensors['ir_left']}, Right={sensors['ir_right']}")
-            print(f"  Flipped: {sensors['flipped']}")
-            
-            print("\nSafety Status:")
-            safety = status['safety']
-            print(f"  Emergency Stop: {'ACTIVE' if safety['emergency_stop_active'] else 'Inactive'}")
-            print(f"  Collision Avoidance: {'Enabled' if safety['collision_avoidance_enabled'] else 'Disabled'}")
-            print(f"  Obstacle Threshold: {safety['obstacle_threshold']}cm")
-            print(f"  Battery Threshold: {safety['battery_threshold']}%")
-            
-            if safety['recent_violations']:
-                print(f"  Recent Violations: {len(safety['recent_violations'])}")
-                for violation in safety['recent_violations'][-3:]:  # Show last 3
-                    print(f"    - {violation}")
-            
-            print("\nConfiguration:")
-            cfg = status['config']
-            print(f"  Motor Limits: {cfg['motor_limits']}")
-            print(f"  Sensor Update Interval: {cfg['sensor_update_interval']}s")
-            print(f"  Collision Avoidance: {cfg['collision_avoidance']}")
-            
+        if not connect_rover(controller, target_type):
+            print("Failed to connect to rover for status check")
+            return
+
+        status = controller.get_status()
+
+        print(f"Connection: {'✓ Connected' if status['connected'] else '✗ Not connected'}")
+        print(f"Current LED Color: {status['current_led_color']}")
+
+        print("\nSensor Readings:")
+        sensors = status['sensors']
+        print(f"  Ultrasonic: {sensors['ultrasonic']}")
+        print(f"  Battery: {sensors['battery_percentage']} ({sensors['battery_voltage']})")
+        print(f"  IMU Accel: X={sensors['accel_x']}, Y={sensors['accel_y']}, Z={sensors['accel_z']}")
+        print(f"  IMU Gyro: X={sensors['gyro_x']}, Y={sensors['gyro_y']}, Z={sensors['gyro_z']}")
+        print(f"  IR Sensors: Left={sensors['ir_left']}, Right={sensors['ir_right']}")
+        print(f"  Flipped: {sensors['flipped']}")
+
+        print("\nSafety Status:")
+        safety = status['safety']
+        print(f"  Emergency Stop: {'ACTIVE' if safety['emergency_stop_active'] else 'Inactive'}")
+        print(f"  Collision Avoidance: {'Enabled' if safety['collision_avoidance_enabled'] else 'Disabled'}")
+        print(f"  Obstacle Threshold: {safety['obstacle_threshold']}cm")
+        print(f"  Battery Threshold: {safety['battery_threshold']}%")
+
+        if safety['recent_violations']:
+            print(f"  Recent Violations: {len(safety['recent_violations'])}")
+            for violation in safety['recent_violations'][-3:]:  # Show last 3
+                print(f"    - {violation}")
+
+        print("\nConfiguration:")
+        cfg = status['config']
+        print(f"  Motor Limits: {cfg['motor_limits']}")
+        print(f"  Sensor Update Interval: {cfg['sensor_update_interval']}s")
+        print(f"  Collision Avoidance: {cfg['collision_avoidance']}")
+
     except Exception as e:
         print(f"Failed to get rover status: {e}")
+    finally:
+        controller.cleanup()
 
 
 def test_connection(config: RoverConfig, target_type: str, ble_port: int = None):
@@ -347,7 +365,7 @@ def test_connection(config: RoverConfig, target_type: str, ble_port: int = None)
         controller = create_rover_controller(config, target_type, ble_port)
         
         print("Attempting connection...")
-        if controller.connect():
+        if connect_rover(controller, target_type, ble_port):
             print("✓ Connection successful!")
             
             # Test basic operations
@@ -508,20 +526,27 @@ def main():
                 from interfaces.gesture_interface import GestureInterface
                 interface_class = GestureInterface
             
-            # Create rover controller
-            with create_rover_controller(config, args.target, args.port) as rover:
-                logger.info("Rover connected successfully")
-                
+            controller = create_rover_controller(config, args.target, args.port)
+
+            if not connect_rover(controller, args.target, args.port):
+                logger.error("Failed to connect to rover")
+                sys.exit(1)
+
+            logger.info("Rover connected successfully")
+
+            try:
                 # Create and run interface
-                interface = interface_class(rover, config)
-                
+                interface = interface_class(controller, config)
+
                 if args.record_session:
                     logger.info(f"Session recording enabled: {args.record_session}")
                     # Enable session recording
                     interface.enable_session_recording(args.record_session)
-                
+
                 logger.info("Starting interface...")
                 interface.run()
+            finally:
+                controller.cleanup()
                 
         else:
             print("Error: No operation specified.")

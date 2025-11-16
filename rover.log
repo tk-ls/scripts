@@ -280,3 +280,44 @@
 2025-10-15 14:21:16 | Main | INFO | Starting interface...
 2025-10-15 14:21:22 | SimulatorRoverController | INFO | Starting cleanup...
 2025-10-15 14:21:22 | Micromelon | INFO | Connection closed
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | MicroMelon Rover Control System Started
+2025-10-23 13:49:44 | RoverLogger | INFO | Log level: INFO
+2025-10-23 13:49:44 | RoverLogger | INFO | File logging: Enabled
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | MicroMelon Rover Control System Started
+2025-10-23 13:49:44 | RoverLogger | INFO | Log level: INFO
+2025-10-23 13:49:44 | RoverLogger | INFO | File logging: Enabled
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | SafetyManager | CRITICAL | EMERGENCY STOP: Test emergency
+2025-10-23 13:49:44 | SafetyManager | INFO | Emergency stop reset
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | MicroMelon Rover Control System Started
+2025-10-23 13:49:44 | RoverLogger | INFO | Log level: INFO
+2025-10-23 13:49:44 | RoverLogger | INFO | File logging: Enabled
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | MicroMelon Rover Control System Started
+2025-10-23 13:49:44 | RoverLogger | INFO | Log level: INFO
+2025-10-23 13:49:44 | RoverLogger | INFO | File logging: Enabled
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | MicroMelon Rover Control System Started
+2025-10-23 13:49:44 | RoverLogger | INFO | Log level: INFO
+2025-10-23 13:49:44 | RoverLogger | INFO | File logging: Enabled
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | SafetyManager | WARNING | Safety stop: Obstacle at 10.0cm (threshold: 20.0cm)
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | RoverLogger | INFO | MicroMelon Rover Control System Started
+2025-10-23 13:49:44 | RoverLogger | INFO | Log level: INFO
+2025-10-23 13:49:44 | RoverLogger | INFO | File logging: Enabled
+2025-10-23 13:49:44 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:44 | ErrorRecoveryManager | ERROR | Handling error: SENSOR_ERROR - Ultrasonic read failed: Sensor failure
+2025-10-23 13:49:44 | ErrorRecoveryManager | INFO | Attempting sensor recovery for ultrasonic
+2025-10-23 13:49:45 | ErrorRecoveryManager | INFO | Sensor recovery attempted
+2025-10-23 13:49:45 | RoverLogger | INFO | ============================================================
+2025-10-23 13:49:45 | RoverLogger | INFO | MicroMelon Rover Control System Started
+2025-10-23 13:49:45 | RoverLogger | INFO | Log level: INFO
+2025-10-23 13:49:45 | RoverLogger | INFO | File logging: Enabled
+2025-10-23 13:49:45 | RoverLogger | INFO | ============================================================

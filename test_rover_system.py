@@ -21,7 +21,7 @@ from error_handling import (
 from rover_base import (
     SensorData, SensorManager, SafetyManager, 
     SimulatorRoverController, BLERoverController,
-    create_rover_controller
+    create_rover_controller, connect_physical_rover
 )
 
 
@@ -354,6 +354,22 @@ class TestRoverControllers(unittest.TestCase):
         controller.cleanup()
         mock_rc_instance.stopRover.assert_called_once()
         mock_rc_instance.end.assert_called_once()
+
+    @patch('rover_base.RoverController')
+    def test_connect_physical_helper(self, mock_rover_controller):
+        """Ensure physical connection helper uses RoverController.connectBLE"""
+        mock_rc_instance = Mock()
+        mock_rover_controller.return_value = mock_rc_instance
+
+        controller = BLERoverController(self.config, auto_port=1234)
+        controller.rc = mock_rc_instance
+
+        success = connect_physical_rover(controller)
+
+        self.assertTrue(success)
+        self.assertTrue(controller.connected)
+        mock_rc_instance.connectBLE.assert_called_once_with(1234)
+        mock_rc_instance.startRover.assert_called_once()
 
 
 class TestSystemIntegration(unittest.TestCase):
